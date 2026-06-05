@@ -21,7 +21,7 @@ import lombok.NoArgsConstructor;
  * <ul>
  * <li>JWT claims for OAuth2 authenticated users (resolved from
  * {@code OAuth2User} attributes)</li>
- * <li>User entity document for local auth authenticated users</li>
+ * <li>User entity for local auth authenticated users</li>
  * </ul>
  *
  * @author Maruf Bepary
@@ -34,7 +34,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UserResponse {
 	/**
-	 * Unique user identifier (MongoDB ObjectId for local users, provider-specific
+	 * Unique user identifier (PostgreSQL UUID for local users, provider-specific
 	 * ID for OAuth2).
 	 * Extracted from JWT {@code sub} claim or User entity id field.
 	 */

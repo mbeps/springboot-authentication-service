@@ -1,18 +1,19 @@
 package com.maruf.auth.repository;
 
 import com.maruf.auth.entity.User;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 /**
- * MongoDB repository for User entity (local auth users).
+ * JPA repository for User entity (local auth users).
  *
  * <p>
- * Extends {@code MongoRepository} to provide CRUD operations and custom query
+ * Extends {@code JpaRepository} to provide CRUD operations and custom query
  * methods
- * for managing User documents in the "users" collection.
+ * for managing User entities in the "users" table.
  *
  * <p>
  * Used exclusively by {@code LocalAuthService} for credential-based
@@ -27,7 +28,7 @@ import java.util.Optional;
  * @see com.maruf.auth.service.LocalAuthService for usage
  */
 @Repository
-public interface UserRepository extends MongoRepository<User, String> {
+public interface UserRepository extends JpaRepository<User, UUID> {
 	/**
 	 * Finds a user by their email address.
 	 *

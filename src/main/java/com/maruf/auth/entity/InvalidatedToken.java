@@ -1,14 +1,19 @@
 package com.maruf.auth.entity;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Represents a revoked (invalidated) JWT access token temporarily stored in a
@@ -24,56 +29,60 @@ import java.time.Instant;
  * expiration time, at which point it becomes cryptographically invalid anyway.
  *
  * <p>
- * Database collection: {@code invalidated_access_tokens}
- * The MongoDB TTL index on {@code expiresAt} automatically removes entries when
+ * Database table: {@code invalidated_access_tokens}
+ * The {@code TokenCleanupService} automatically removes entries when
  * the token expires.
- * This document is typically only checked by the authentication service; stateless resource servers
+ * This entity is typically only checked by the authentication service; stateless resource servers
  * normally rely on JWT expiration for validation.
  *
  * @author Maruf Bepary
  * @see com.maruf.auth.service.RefreshTokenStore for blacklist operations
  * @see com.maruf.auth.config.JwtAuthenticationFilter for blacklist verification
  */
-@Document(collection = "invalidated_access_tokens")
+@Entity
+@Table(name = "invalidated_access_tokens", indexes = {
+		@Index(name = "idx_invalidated_token_expires_at", columnList = "expiresAt")
+})
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class InvalidatedToken {
 	/**
-	 * MongoDB document ID (ObjectId).
-	 * Auto-generated on document creation.
+	 * Primary key (UUID).
+	 * Auto-generated on insertion.
 	 */
 	@Id
-	private String id;
+	@GeneratedValue(strategy = GenerationType.UUID)
+	private UUID id;
 
 	/**
 	 * The raw JWT access token string being invalidated.
 	 * Unique constraint enforced to prevent duplicate entries.
 	 * Checked against every incoming request in {@code JwtAuthenticationFilter}.
 	 */
-	@Indexed(unique = true)
+	@Column(unique = true, nullable = false, columnDefinition = "TEXT")
 	private String token;
 
 	/**
 	 * The email/login of the user who logged out.
 	 * Used for audit logging and identifying which user's tokens were revoked.
 	 */
+	@Column(nullable = false)
 	private String username;
 
 	/**
 	 * Token's natural expiration time (matching the {@code exp} claim in the JWT).
-	 * MongoDB TTL index automatically deletes this entry when timestamp is reached.
-	 * Typically 15 minutes from logout; no need to keep record longer than JWT
-	 * validity.
+	 * Indexed for efficient cleanup.
 	 */
-	@Indexed(expireAfter = "0s")
+	@Column(nullable = false)
 	private Instant expiresAt;
 
 	/**
 	 * Timestamp when the token was invalidated (logout instant).
 	 * Used for audit trails to understand when the revocation occurred.
 	 */
+	@Column(nullable = false)
 	private Instant invalidatedAt;
 
 	/**
@@ -81,5 +90,6 @@ public class InvalidatedToken {
 	 * Currently always set to "logout" but allows for future extensibility
 	 * (e.g., "suspicious_activity", "password_change").
 	 */
+	@Column(nullable = false)
 	private String reason;
 }

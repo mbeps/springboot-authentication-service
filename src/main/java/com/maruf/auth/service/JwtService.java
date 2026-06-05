@@ -177,7 +177,7 @@ public class JwtService {
 	 * <p>
 	 * Refresh tokens are typically hashed via
 	 * {@link com.maruf.auth.service.RefreshTokenStore#applyHash(String)} before
-	 * storage in MongoDB to prevent token theft via database breach.
+	 * storage in PostgreSQL to prevent token theft via database breach.
 	 *
 	 * @param username         the subject (username or email) of the token
 	 * @param additionalClaims optional custom claims to include

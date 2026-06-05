@@ -2,6 +2,7 @@ package com.maruf.auth;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Entry point for the authentication service.
@@ -15,6 +16,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @see com.maruf.auth.controller.AuthController
  */
 @SpringBootApplication
+@EnableScheduling
 public class AuthenticationApplication {
 
 	/**

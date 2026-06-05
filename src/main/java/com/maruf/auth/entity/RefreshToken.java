@@ -1,14 +1,19 @@
 package com.maruf.auth.entity;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Represents a long-lived refresh token used for automatic JWT re-issuance.
@@ -24,19 +29,22 @@ import java.time.Instant;
  * Supports token rotation: when enabled
  * ({@code app.security.refresh-token.rotation-enabled}),
  * each use of a refresh token invalidates the old token and issues a new one.
- * The MongoDB TTL
- * index on {@code expiresAt} automatically removes expired tokens from the
- * database.
+ * The {@code TokenCleanupService}
+ * automatically removes expired tokens from the database.
  *
  * <p>
- * Database collection: {@code refresh_tokens}
+ * Database table: {@code refresh_tokens}
  * Unique constraint on token ensures one active token per session.
  *
  * @author Maruf Bepary
  * @see com.maruf.auth.service.RefreshTokenStore for token lifecycle management
  * @see com.maruf.auth.controller.AuthController for refresh endpoint
  */
-@Document(collection = "refresh_tokens")
+@Entity
+@Table(name = "refresh_tokens", indexes = {
+		@Index(name = "idx_refresh_token_username", columnList = "username"),
+		@Index(name = "idx_refresh_token_expires_at", columnList = "expiresAt")
+})
 @Data
 @Builder
 @NoArgsConstructor
@@ -44,11 +52,12 @@ import java.time.Instant;
 public class RefreshToken {
 
 	/**
-	 * MongoDB document ID (ObjectId).
-	 * Auto-generated on document creation.
+	 * Primary key (UUID).
+	 * Auto-generated on insertion.
 	 */
 	@Id
-	private String id;
+	@GeneratedValue(strategy = GenerationType.UUID)
+	private UUID id;
 
 	/**
 	 * The refresh token value (SHA-256 hash if hashing is enabled).
@@ -57,29 +66,28 @@ public class RefreshToken {
 	 * Raw token is generated as a secure random string; hash is stored for
 	 * security.
 	 */
-	@Indexed(unique = true)
+	@Column(unique = true, nullable = false)
 	private String token;
 
 	/**
 	 * The user's email address (login identifier).
 	 * Indexed for efficient user-based queries (e.g., "find all tokens for user").
 	 */
-	@Indexed
+	@Column(nullable = false)
 	private String username;
 
 	/**
 	 * Token expiration timestamp (7 days from creation by default).
-	 * MongoDB TTL index automatically deletes this document when this instant is
-	 * reached.
-	 * Field name and TTL behavior configured via Spring Data MongoDB annotations.
+	 * Indexed for efficient cleanup.
 	 */
-	@Indexed(expireAfter = "0s")
+	@Column(nullable = false)
 	private Instant expiresAt;
 
 	/**
 	 * Timestamp when this token was originally created.
 	 * Used for audit trailing and understanding token age.
 	 */
+	@Column(nullable = false)
 	private Instant createdAt;
 
 	/**
@@ -87,5 +95,6 @@ public class RefreshToken {
 	 * Updated on each call to {@code /api/auth/refresh}.
 	 * Useful for tracking active sessions and detecting stale tokens.
 	 */
+	@Column(nullable = false)
 	private Instant lastUsed;
 }
