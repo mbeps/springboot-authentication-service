@@ -38,10 +38,18 @@ spring:
           azure:
             issuer-uri: https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0
             user-name-attribute: sub
-  mongodb:
-    uri: ${MONGO_URI:mongodb://localhost:27018/auth_db}
-    representation:
-      uuid: JAVA_LEGACY
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/auth_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
 server:
   port: ${SERVER_PORT:8081}

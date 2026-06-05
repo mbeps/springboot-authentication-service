@@ -35,7 +35,7 @@ import org.springframework.stereotype.Component;
 public class RefreshTokenSecurityProperties {
 
 	/**
-	 * Whether to store refresh tokens as SHA-256 hashes in MongoDB.
+	 * Whether to store refresh tokens as SHA-256 hashes in PostgreSQL.
 	 * <p>
 	 * When enabled ({@code true}), the raw refresh token is hashed using SHA-256
 	 * before storage. This prevents database compromise from directly exposing

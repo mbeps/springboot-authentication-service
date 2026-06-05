@@ -2,7 +2,7 @@
 
 A standalone OAuth 2.0 and Local Authentication Service built with Spring Boot 4.0.3. This service provides secure identity management, multi-provider OAuth2 flows, and RS256-signed JWT issuance for consumption by any compliant frontend or backend service. It features a JWKS endpoint for seamless public key distribution, enabling resource servers to verify user identity without shared secrets.
 
-The application implements a dual-token authentication system with short-lived access tokens and long-lived refresh tokens, both intended to be stored as httpOnly cookies to prevent XSS attacks. The service owns all identity logic—OAuth2 flows, RS256 JWT signing with an RSA private key, and MongoDB storage for token lifecycle management. Resource servers remain completely independent, verifying JWTs via the JWKS public key endpoint.
+The application implements a dual-token authentication system with short-lived access tokens and long-lived refresh tokens, both intended to be stored as httpOnly cookies to prevent XSS attacks. The service owns all identity logic—OAuth2 flows, RS256 JWT signing with an RSA private key, and PostgreSQL storage for token lifecycle management. Resource servers remain completely independent, verifying JWTs via the JWKS public key endpoint.
 
 # Features
 
@@ -26,7 +26,7 @@ Secure token generation, validation, and lifecycle management with RS256 asymmet
 - Token expiry handling and validation
 - Automatic access token refresh using refresh tokens
 - Refresh token rotation for enhanced security
-- Persistent refresh token storage in MongoDB
+- Persistent refresh token storage in PostgreSQL
 
 ## Multi-Service Integration
 Designed to serve as a central Identity Provider (IdP) for multiple client applications and resource servers:
@@ -38,7 +38,7 @@ Designed to serve as a central Identity Provider (IdP) for multiple client appli
 Secure session termination and cleanup:
 - Access token invalidation on logout (blacklist storage)
 - Refresh token revocation from database
-- Automatic cleanup of expired tokens via MongoDB TTL indexes
+- Automatic cleanup of expired tokens via scheduled background task
 
 ## User Profile Management
 Hydrates user profile information across providers:
@@ -56,7 +56,7 @@ Discovery endpoints for monitoring and integration:
 # Requirements
 These are the requirements needed to run the service:
 - Java 21 or higher
-- MongoDB 4.4 or higher
+- PostgreSQL 14 or higher
 - OAuth Application credentials for one or both providers (configured in `application.yaml`):
   - **GitHub OAuth Application** (Client ID and Client Secret)
   - **Microsoft Entra ID App Registration** (Client ID, Client Secret, and Tenant ID)
@@ -69,12 +69,12 @@ These are the main technologies used in this project:
 - [**Spring Boot**](https://spring.io/projects/spring-boot): A framework for building production-ready applications with minimal configuration. This project uses Spring Boot 4.0.3 with updated starters: `spring-boot-starter-webmvc` and `spring-boot-starter-security-oauth2-client`.
 - [**Spring Security**](https://spring.io/projects/spring-security): Comprehensive security framework providing authentication and authorisation.
 - [**Spring Security OAuth2 Client**](https://docs.spring.io/spring-security/reference/servlet/oauth2/client/index.html): OAuth 2.0 client implementation for handling provider callbacks and authorization.
-- [**Spring Data MongoDB**](https://spring.io/projects/spring-data-mongodb): Provides integration with MongoDB for token persistence and user storage with Spring Boot 4.0.3 UUID representation support.
+- [**Spring Data JPA**](https://spring.io/projects/spring-data-jpa): Provides integration with PostgreSQL for token persistence and user storage.
 - [**JJWT**](https://github.com/jwtk/jjwt): Java JWT library for creating and parsing JSON Web Tokens with RS256 RSA signing.
 - [**Gradle**](https://gradle.org/): Build automation tool for dependency management and project building.
 
 ## Database
-- [**MongoDB**](https://www.mongodb.com/): NoSQL database for storing refresh tokens, users, and invalidated access tokens with TTL-based expiry.
+- [**PostgreSQL**](https://www.postgresql.org/): Relational database for storing refresh tokens, users, and invalidated access tokens with scheduled cleanup of expired entries.
 
 # Design
 
@@ -82,10 +82,10 @@ These are the main technologies used in this project:
 The service issues tokens intended for `httpOnly` cookie storage by client applications. This approach prevents XSS attacks as JavaScript cannot access these cookies. Access tokens have a 15-minute lifespan whilst refresh tokens last 7 days by default. 
 
 ## Database Architecture
-MongoDB is used for persistence by the service. It stores three collections:
+PostgreSQL is used for persistence by the service. It stores three tables:
 
 - `users`: Local user credentials and profile information (used when local auth is enabled)
-  - `id`: MongoDB ObjectId
+  - `id`: UUID
   - `email`: Unique login identifier
   - `password`: BCrypt hash
   - `name`: Display name
@@ -93,22 +93,22 @@ MongoDB is used for persistence by the service. It stores three collections:
   - `roles`: User roles (e.g. ROLE_USER)
 
 - `refresh_tokens`: Long-lived tokens supporting rotation and hashing
-  - `id`: MongoDB ObjectId
+  - `id`: UUID
   - `token`: SHA-256 hash of the token (when hashing is enabled)
   - `username`: Associated user email/login
-  - `expiresAt`: Expiry timestamp with TTL index; document auto-deleted when reached
+  - `expiresAt`: Expiry timestamp; column used by scheduled cleanup task to remove expired entries
   - `createdAt`: Token creation timestamp
   - `lastUsed`: Timestamp of last refresh use
 
 - `invalidated_access_tokens`: Blacklist of revoked but not yet naturally expired access tokens
-  - `id`: MongoDB ObjectId
+  - `id`: UUID
   - `token`: Raw JWT string (unique indexed)
   - `username`: User identifier for audit
-  - `expiresAt`: Token's natural expiry with TTL index; document auto-removed at expiry
+  - `expiresAt`: Token's natural expiry; removed by scheduled cleanup task at expiry
   - `invalidatedAt`: Logout/revocation timestamp
   - `reason`: Reason for invalidation (e.g. "logout")
 
-All collections use MongoDB's TTL indexes on the `expiresAt` field to automatically delete expired documents, eliminating the need for manual cleanup.
+All tables use a scheduled background cleanup task to automatically delete expired entries.
 
 ## JWT Token Structure & RS256 Signing
 Access tokens contain user claims (ID, login, name, email, avatar URL) and a type field set to `access`. Refresh tokens contain minimal information with type set to `refresh`. 
@@ -159,8 +159,8 @@ The service (port 8081) handles all identity operations:
 The logout flow revokes both tokens:
 
 1. Client application calls `POST /logout` on the **auth service**
-2. Service adds the access token to the `invalidated_access_tokens` collection
-3. Service deletes the refresh token from MongoDB
+2. Service adds the access token to the `invalidated_access_tokens` table
+3. Service deletes the refresh token from PostgreSQL
 4. Service clears cookies and returns success
 
 # Setting Up Project
@@ -172,8 +172,8 @@ git clone https://github.com/mbeps/oauth-springboot-auth-service.git
 cd oauth-springboot-auth-service
 ```
 
-## 2. Set Up MongoDB
-Ensure MongoDB is running locally (default: `mongodb://localhost:27018`). The service will automatically create the required collections and indexes.
+## 2. Set Up PostgreSQL
+Ensure PostgreSQL is running locally (default: `jdbc:postgresql://localhost:5433/auth_db_pg`). The service will automatically create the required tables and schema via Hibernate.
 
 ## 3. Create OAuth Applications
 Configure your OAuth providers in `application.yaml`:
@@ -202,9 +202,17 @@ spring:
           azure:
             client-id: ${AZURE_CLIENT_ID}
             client-secret: ${AZURE_CLIENT_SECRET}
-  data:
-    mongodb:
-      uri: ${MONGO_URI:mongodb://localhost:27018/auth_db}
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/auth_db_pg}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
 server:
   port: 8081
@@ -228,7 +236,9 @@ GITHUB_CLIENT_SECRET=your_secret
 AZURE_CLIENT_ID=your_id
 AZURE_CLIENT_SECRET=your_secret
 AZURE_TENANT_ID=your_tenant
-MONGO_URI=mongodb://localhost:27018/auth_db
+DB_URL=jdbc:postgresql://localhost:5433/auth_db_pg
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
 JWT_PRIVATE_KEY_PATH=keys/auth-private.pem
 JWT_PUBLIC_KEY_PATH=keys/auth-public.pem
 AUTH_ALLOWED_ORIGIN_1=https://your-app.com
@@ -255,7 +265,7 @@ Ensure you have generated the RSA key pair in the `keys/` directory first.
 - Generate RSA key pair: `openssl genpkey -algorithm RSA -out keys/auth-private.pem && openssl rsa -in keys/auth-private.pem -pubout -out keys/auth-public.pem`
 - Set `COOKIE_SECURE=true` and `COOKIE_SAME_SITE=Strict` for HTTPS-only cookies
 - Set `AUTH_ALLOWED_ORIGIN_1` and `AUTH_ALLOWED_REDIRECT_1` to your production domain(s)
-- Configure MongoDB with authentication and SSL/TLS in `MONGO_URI`
+- Configure PostgreSQL with authentication and SSL/TLS in `DB_URL`
 - Ensure Java 21+ and Spring Boot 4.0.3 compatible dependencies
 
 # References
@@ -264,7 +274,7 @@ Ensure you have generated the RSA key pair in the `keys/` directory first.
 - [Spring Boot Documentation](https://spring.io/projects/spring-boot) - Official Spring Boot framework documentation and guides for building production-grade applications.
 - [Spring Security Reference](https://spring.io/projects/spring-security) - Comprehensive authentication and authorisation framework for Java applications.
 - [Spring Security OAuth2 Client](https://docs.spring.io/spring-security/reference/servlet/oauth2/client/index.html) - OAuth2 client implementation for delegated access and provider integration.
-- [Spring Data MongoDB](https://spring.io/projects/spring-data-mongodb) - Data access layer abstraction for MongoDB with Spring Boot integration.
+- [Spring Data JPA](https://spring.io/projects/spring-data-jpa) - Data access layer abstraction with Spring Boot integration for PostgreSQL.
 
 ## JWT & Cryptography
 - [JJWT Library](https://github.com/jwtk/jjwt) - Java JWT library supporting RS256 RSA asymmetric signing and token lifecycle management.
@@ -281,9 +291,8 @@ Ensure you have generated the RSA key pair in the `keys/` directory first.
 - [Microsoft Entra ID OAuth2](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow) - Azure AD (Entra) OAuth2 authorization code flow documentation.
 
 ## Database & Persistence
-- [MongoDB Documentation](https://docs.mongodb.com/) - Official MongoDB reference for CRUD operations, indexing, and TTL index administration.
-- [MongoDB TTL Indexes](https://docs.mongodb.com/manual/core/index-ttl/) - Automatic document expiration mechanism for token cleanup.
-- [Spring Data MongoDB Query Methods](https://spring.io/projects/spring-data-mongodb) - Query derivation and repository pattern for MongoDB.
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/) - Official PostgreSQL reference for SQL operations and administration.
+- [Spring Data JPA Repository](https://spring.io/projects/spring-data-jpa) - Query derivation and repository pattern for RDBMS.
 
 ## Security Best Practices
 - [OWASP - Cross-Site Scripting (XSS)](https://owasp.org/www-community/attacks/xss/) - HttpOnly cookie vulnerability prevention and XSS attack mitigation.
@@ -293,7 +302,7 @@ Ensure you have generated the RSA key pair in the `keys/` directory first.
 
 ## Testing & Development
 - [JUnit 5 Documentation](https://junit.org/junit5/docs/current/user-guide/) - Java testing framework for unit and integration tests.
-- [Testcontainers](https://www.testcontainers.org/) - Docker-based test dependency management for isolated MongoDB testing.
+- [Testcontainers](https://www.testcontainers.org/) - Docker-based test dependency management for isolated PostgreSQL testing.
 - [Mockito Testing Framework](https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html) - Mocking library for Java unit tests.
 - [Spring Boot Testing Guide](https://spring.io/guides/gs/testing-web/) - MockMvc and integration testing patterns for Spring Boot applications.
 

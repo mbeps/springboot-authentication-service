@@ -41,7 +41,7 @@ public class LoginRequest {
 	 * User's email address (login identifier).
 	 * Constraints: Must be non-blank and valid email format (RFC 5322 via
 	 * Jakarta @Email).
-	 * Only emails with existing documents in the users collection can authenticate.
+	 * Only emails with existing entries in the users table can authenticate.
 	 */
 	@NotBlank
 	@Email

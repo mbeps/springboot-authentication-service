@@ -10,7 +10,7 @@ import lombok.Data;
  *
  * <p>
  * Accepts new user registration details: email, password, and full name.
- * On successful signup, creates a new User document with BCrypt-hashed password
+ * On successful signup, creates a new User entity with BCrypt-hashed password
  * and initializes refresh/access tokens.
  *
  * <p>

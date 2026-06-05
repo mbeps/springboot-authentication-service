@@ -394,7 +394,7 @@ public class AuthController {
 	 * <p>
 	 * Generates both an RS256-signed access token (15 minutes) and refresh token (7
 	 * days),
-	 * stores the hashed refresh token in MongoDB, and writes both tokens to
+	 * stores the hashed refresh token in PostgreSQL, and writes both tokens to
 	 * httpOnly secure
 	 * cookies. All user profile attributes (id, email, name, avatar URL) are
 	 * encoded into
@@ -440,7 +440,7 @@ public class AuthController {
 	 * <p>
 	 * Invalidates the current refresh token by deleting it from the database,
 	 * generates
-	 * a new refresh token with the same claims, persists it to MongoDB with a new
+	 * a new refresh token with the same claims, persists it to PostgreSQL with a new
 	 * expiration
 	 * time, and writes the new token to an httpOnly cookie in the response. This
 	 * enhances

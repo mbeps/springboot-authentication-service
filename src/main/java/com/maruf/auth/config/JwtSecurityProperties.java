@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component;
  * <ul>
  * <li>Generating JWT tokens via {@link com.maruf.auth.service.JwtService}</li>
  * <li>Setting HTTP cookie max-age values via {@link HttpCookieFactory}</li>
- * <li>Writing token expiration times to MongoDB via
+ * <li>Writing token expiration times to PostgreSQL via
  * {@link com.maruf.auth.service.RefreshTokenStore}</li>
  * </ul>
  *
@@ -72,7 +72,7 @@ public class JwtSecurityProperties {
 	 * <li>{@link com.maruf.auth.service.JwtService#generateRefreshToken(String, java.util.Map)}
 	 * to set the JWT {@code exp} claim</li>
 	 * <li>{@link com.maruf.auth.service.RefreshTokenStore#storeRefreshToken(String, String, java.time.Instant)}
-	 * to set MongoDB TTL expiration</li>
+	 * to set PostgreSQL TTL expiration</li>
 	 * <li>{@link HttpCookieFactory#buildTokenCookie(String, String, java.time.Duration)}
 	 * to set the HTTP cookie max-age</li>
 	 * </ul>

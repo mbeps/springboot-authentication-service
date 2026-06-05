@@ -1,25 +1,25 @@
 package com.maruf.auth.repository;
 
 import com.maruf.auth.entity.RefreshToken;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
- * MongoDB repository for RefreshToken entity.
+ * JPA repository for RefreshToken entity.
  *
  * <p>
- * Extends {@code MongoRepository} to provide CRUD operations and custom query
+ * Extends {@code JpaRepository} to provide CRUD operations and custom query
  * methods
- * for managing RefreshToken documents in the "refresh_tokens" collection.
+ * for managing RefreshToken entities in the "refresh_tokens" table.
  *
  * <p>
  * Handles token lifecycle: storage on login/signup, lookup on refresh, deletion
  * on logout
- * or token rotation. MongoDB TTL index on {@code expiresAt} automatically
- * removes expired
- * tokens, so no manual cleanup is required.
+ * or token rotation.
  *
  * <p>
  * Tokens are stored as SHA-256 hashes (configurable via
@@ -31,9 +31,9 @@ import java.util.Optional;
  * @see com.maruf.auth.service.RefreshTokenStore for storage/retrieval logic
  */
 @Repository
-public interface RefreshTokenRepository extends MongoRepository<RefreshToken, String> {
+public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID> {
 	/**
-	 * Finds a refresh token document by its token value (SHA-256 hash).
+	 * Finds a refresh token entity by its token value (SHA-256 hash).
 	 *
 	 * <p>
 	 * Used during token refresh to validate and retrieve the token from the
@@ -48,18 +48,23 @@ public interface RefreshTokenRepository extends MongoRepository<RefreshToken, St
 	Optional<RefreshToken> findByToken(String token);
 
 	/**
-	 * Deletes a refresh token document by its token value.
+	 * Deletes a refresh token entity by its token value.
 	 *
 	 * <p>
 	 * Used during token rotation (when
 	 * {@code app.security.refresh-token.rotation-enabled=true})
 	 * to invalidate the old token after issuing a new one. Also called on explicit
 	 * logout
-	 * to prevent token reuse. Expired tokens are automatically removed by MongoDB
-	 * TTL index,
-	 * so this method is for explicit, immediate deletion.
+	 * to prevent token reuse.
 	 *
 	 * @param token The refresh token (or its hash) to delete
 	 */
 	void deleteByToken(String token);
+
+	/**
+	 * Deletes all refresh tokens that have expired.
+	 *
+	 * @param now The current timestamp
+	 */
+	void deleteByExpiresAtBefore(Instant now);
 }

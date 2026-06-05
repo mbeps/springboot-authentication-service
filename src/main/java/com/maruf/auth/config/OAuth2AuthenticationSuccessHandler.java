@@ -25,7 +25,7 @@ import java.util.Map;
  * <p>
  * After a user successfully authenticates with a third-party provider, this
  * handler validates required attributes, generates RS256-signed access and
- * refresh tokens via {@link JwtService}, stores the refresh token in MongoDB
+ * refresh tokens via {@link JwtService}, stores the refresh token in PostgreSQL
  * (with optional hashing/rotation), writes cookies, and finally redirects the
  * user to the appropriate client application {@code /dashboard} URL. The original
  * {@code redirect_uri} is carried inside the OAuth2 state parameter.
@@ -55,7 +55,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 	 * <li>Generates an RS256-signed refresh token with detailed user claims via
 	 * {@link JwtService#generateRefreshToken(String, java.util.Map)}
 	 * </li>
-	 * <li>Persists the refresh token to MongoDB via
+	 * <li>Persists the refresh token to PostgreSQL via
 	 * {@link RefreshTokenStore#storeRefreshToken(String, String, java.time.Instant)}
 	 * </li>
 	 * <li>Writes both tokens as {@code httpOnly} cookies via

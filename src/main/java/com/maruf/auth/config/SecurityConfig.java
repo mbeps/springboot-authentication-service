@@ -106,7 +106,7 @@ public class SecurityConfig {
 	/**
 	 * Password encoder bean used for local authentication.
 	 * <p>
-	 * BCrypt is chosen for hashing user passwords before storage in MongoDB.
+	 * BCrypt is chosen for hashing user passwords before storage in PostgreSQL.
 	 * This bean is autowired into {@link com.maruf.auth.service.LocalAuthService}.
 	 *
 	 * @return a {@link PasswordEncoder} instance

@@ -8,6 +8,7 @@ import com.maruf.auth.config.RefreshTokenSecurityProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.nio.charset.StandardCharsets;
@@ -21,7 +22,7 @@ import java.util.Optional;
  * token blacklist.
  *
  * <p>
- * Provides a secure, MongoDB-backed token storage layer with support for:
+ * Provides a secure, PostgreSQL-backed token storage layer with support for:
  * <ul>
  * <li><strong>Token persistence:</strong> Stores refresh tokens with creation
  * and last-used timestamps</li>
@@ -29,10 +30,9 @@ import java.util.Optional;
  * new ones on each refresh</li>
  * <li><strong>SHA-256 hashing:</strong> Optionally hashes refresh tokens before
  * storage to protect against database dumps</li>
- * <li><strong>Access token blacklist:</strong> Maintains a TTL-indexed
- * blacklist of revoked (logged out) access tokens</li>
- * <li><strong>TTL cleanup:</strong> MongoDB TTL indexes automatically delete
- * expired documents at expiration time</li>
+ * <li><strong>Access token blacklist:</strong> Maintains a blacklist of revoked
+ * (logged out) access tokens</li>
+ * <li><strong>TTL cleanup:</strong> Scheduled background task manually deletes expired tokens</li>
  * </ul>
  *
  * <p>
@@ -57,12 +57,11 @@ import java.util.Optional;
  * <strong>Access token blacklist:</strong> When a user logs out, their access
  * token (still valid
  * for ~13 minutes) is stored in the {@code invalidated_access_tokens}
- * collection with its natural
+ * table with its natural
  * expiration timestamp. The auth service filter checks this blacklist on every
  * request; resource servers
- * may not check the blacklist if they lack database access. MongoDB's TTL index
- * automatically removes
- * blacklisted tokens once their expiration time passes.
+ * may not check the blacklist if they lack database access. The {@code TokenCleanupService}
+ * automatically removes blacklisted tokens once their expiration time passes.
  *
  * @see RefreshToken entity for token storage structure
  * @see InvalidatedToken entity for blacklist storage structure
@@ -72,6 +71,7 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional
 public class RefreshTokenStore {
 
 	private final RefreshTokenRepository refreshTokenRepository;
@@ -88,13 +88,10 @@ public class RefreshTokenStore {
 	 * creation
 	 * and last-used timestamps to enable token rotation tracking and usage
 	 * auditing.
-	 * The MongoDB TTL index on the {@code expiresAt} field ensures automatic
-	 * cleanup.
 	 *
 	 * @param token     the raw JWT refresh token string to persist
 	 * @param username  the associated user's email or login identifier
-	 * @param expiresAt the timestamp when this token becomes invalid; MongoDB TTL
-	 *                  deletion occurs at this time
+	 * @param expiresAt the timestamp when this token becomes invalid
 	 * @see #applyHash for hashing logic controlled by configuration
 	 * @see RefreshToken entity for the storage structure
 	 */
@@ -121,9 +118,7 @@ public class RefreshTokenStore {
 	 * database
 	 * query. If found, updates the {@code lastUsed} timestamp to the current
 	 * instant before returning
-	 * the username. Returns {@code null} if the token is not found or has expired
-	 * (expired tokens
-	 * are automatically deleted by MongoDB TTL index).
+	 * the username. Returns {@code null} if the token is not found or has expired.
 	 *
 	 * @param token the raw JWT refresh token string
 	 * @return the associated username (email/login), or {@code null} if token not
@@ -166,8 +161,8 @@ public class RefreshTokenStore {
 	 * <p>
 	 * Called during logout to immediately revoke the current access token. The
 	 * token is stored
-	 * with its natural expiration time; MongoDB's TTL index automatically removes
-	 * the blacklist
+	 * with its natural expiration time. The {@code TokenCleanupService}
+	 * automatically removes the blacklist
 	 * entry once the token naturally expires (making the entry obsolete anyway).
 	 * The raw token string
 	 * is stored (not hashed) to allow quick blacklist checks during request
@@ -175,8 +170,7 @@ public class RefreshTokenStore {
 	 *
 	 * @param token     the raw JWT access token string to blacklist
 	 * @param username  the associated username for audit trail and logging
-	 * @param expiresAt the natural expiration time of the token; used for MongoDB
-	 *                  TTL auto-cleanup
+	 * @param expiresAt the natural expiration time of the token
 	 * @see InvalidatedTokenRepository#save for database persistence
 	 * @see #isAccessTokenInvalidated for blacklist lookup during authentication
 	 */
@@ -257,7 +251,7 @@ public class RefreshTokenStore {
 	 * found,
 	 * which may indicate an invalid token, an already-rotated token, or an expired
 	 * token
-	 * (the latter of which may have been automatically deleted by MongoDB's TTL
+	 * (the latter of which may have been automatically deleted by PostgreSQL's TTL
 	 * cleanup).
 	 *
 	 * @param token the raw refresh token string
