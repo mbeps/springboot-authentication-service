@@ -1,0 +1,69 @@
+spring:
+  config:
+    import: optional:file:.env.local[.properties]
+  application:
+    name: authentication
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${GITHUB_CLIENT_ID:YOUR_GITHUB_CLIENT_ID}
+            client-secret: ${GITHUB_CLIENT_SECRET:YOUR_GITHUB_CLIENT_SECRET}
+            redirect-uri: "{baseUrl}/login/oauth2/code/github"
+            client-authentication-method: client_secret_post
+            client-name: GitHub
+            scope:
+              - user:email
+              - read:user
+          azure:
+            client-id: ${AZURE_CLIENT_ID:YOUR_AZURE_CLIENT_ID}
+            client-secret: ${AZURE_CLIENT_SECRET:YOUR_AZURE_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            client-authentication-method: client_secret_post
+            redirect-uri: "{baseUrl}/login/oauth2/code/azure"
+            scope:
+              - openid
+              - profile
+              - email
+              - offline_access
+              - User.Read
+            client-name: Microsoft Entra ID
+        provider:
+          github:
+            authorization-uri: https://github.com/login/oauth/authorize
+            token-uri: https://github.com/login/oauth/access_token
+            user-info-uri: https://api.github.com/user
+            user-name-attribute: id
+          azure:
+            issuer-uri: https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0
+            user-name-attribute: sub
+  mongodb:
+    uri: ${MONGO_URI:mongodb://localhost:27018/auth_db}
+    representation:
+      uuid: JAVA_LEGACY
+
+server:
+  port: ${SERVER_PORT:8081}
+
+jwt:
+  private-key-path: ${JWT_PRIVATE_KEY_PATH:keys/auth-private.pem}
+  public-key-path: ${JWT_PUBLIC_KEY_PATH:keys/auth-public.pem}
+  access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:900000}
+  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800000}
+
+auth:
+  allowed-origins: [http://localhost:your-client-port, http://localhost:your-resource-server-port]
+  allowed-redirect-urls: [http://localhost:your-client-port]
+
+cookie:
+  secure: ${COOKIE_SECURE:false}
+  same-site: ${COOKIE_SAME_SITE:Lax}
+
+app:
+  security:
+    refresh-token:
+      hashing-enabled: ${REFRESH_TOKEN_HASHING:true}
+      rotation-enabled: ${REFRESH_TOKEN_ROTATION:true}
+    local-auth:
+      enabled: ${LOCAL_AUTH_ENABLED:true}

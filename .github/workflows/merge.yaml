@@ -42,8 +42,7 @@ jobs:
             workflows:
               - '.github/workflows/**'
 
-  # --- Authentication Service Jobs ---
-  auth-build:
+  build:
     name: Auth Build (JDK ${{ matrix.java-version }})
     runs-on: ubuntu-latest
     needs: changes
@@ -53,7 +52,7 @@ jobs:
       needs.changes.outputs.workflows == 'true'
     strategy:
       matrix:
-        java-version: [17, 21, 25]
+        java-version: [21, 25]
       fail-fast: false
     steps:
       - name: Checkout code
@@ -82,13 +81,13 @@ jobs:
           name: auth-build-reports-${{ matrix.java-version }}
           path: authentication/build/reports/
 
-  auth-test:
+  test:
     name: Auth Test (JDK ${{ matrix.java-version }})
     runs-on: ubuntu-latest
-    needs: auth-build
+    needs: build
     strategy:
       matrix:
-        java-version: [17, 21, 25]
+        java-version: [21, 25]
       fail-fast: false
     steps:
       - name: Checkout code
@@ -116,171 +115,3 @@ jobs:
         with:
           name: auth-test-results-${{ matrix.java-version }}
           path: authentication/build/reports/tests/test/
-
-  # --- Backend Service Jobs ---
-  backend-build:
-    name: Backend Build (JDK ${{ matrix.java-version }})
-    runs-on: ubuntu-latest
-    needs: changes
-    if: |
-      github.event_name == 'push' ||
-      needs.changes.outputs.backend == 'true' ||
-      needs.changes.outputs.workflows == 'true'
-    strategy:
-      matrix:
-        java-version: [17, 21, 25]
-      fail-fast: false
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Set up JDK ${{ matrix.java-version }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ matrix.java-version }}
-          distribution: 'temurin'
-          cache: 'gradle'
-          cache-dependency-path: 'backend/build.gradle'
-      
-      - name: Grant execute permission for gradlew
-        working-directory: ./backend
-        run: chmod +x gradlew
-      
-      - name: Build (excluding tests)
-        working-directory: ./backend
-        run: ./gradlew build -x test
-      
-      - name: Upload build reports
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-build-reports-${{ matrix.java-version }}
-          path: backend/build/reports/
-
-  backend-test:
-    name: Backend Test (JDK ${{ matrix.java-version }})
-    runs-on: ubuntu-latest
-    needs: backend-build
-    strategy:
-      matrix:
-        java-version: [17, 21, 25]
-      fail-fast: false
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Set up JDK ${{ matrix.java-version }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ matrix.java-version }}
-          distribution: 'temurin'
-          cache: 'gradle'
-          cache-dependency-path: 'backend/build.gradle'
-      
-      - name: Grant execute permission for gradlew
-        working-directory: ./backend
-        run: chmod +x gradlew
-      
-      - name: Run tests
-        working-directory: ./backend
-        run: ./gradlew test
-      
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-test-results-${{ matrix.java-version }}
-          path: backend/build/reports/tests/test/
-
-  # --- Frontend Service Jobs ---
-  frontend-lint:
-    name: Frontend Lint
-    runs-on: ubuntu-latest
-    needs: changes
-    if: |
-      github.event_name == 'push' ||
-      needs.changes.outputs.frontend == 'true' ||
-      needs.changes.outputs.workflows == 'true'
-    strategy:
-      matrix:
-        node-version: [22.13.0] # Node 22+ required by Next.js 16
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'yarn'
-          cache-dependency-path: frontend/yarn.lock
-
-      - name: Install dependencies
-        working-directory: ./frontend
-        run: yarn install --frozen-lockfile
-
-      - name: Run Linter (ESLint only - Next.js 16 removed `next lint`)
-        working-directory: ./frontend
-        run: yarn lint
-
-  frontend-test:
-    name: Frontend Test
-    runs-on: ubuntu-latest
-    needs: [changes, frontend-lint]
-    if: |
-      github.event_name == 'push' ||
-      needs.changes.outputs.frontend == 'true' ||
-      needs.changes.outputs.workflows == 'true'
-    strategy:
-      matrix:
-        node-version: [22.13.0] # Node 22+ required by Next.js 16
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'yarn'
-          cache-dependency-path: frontend/yarn.lock
-
-      - name: Install dependencies
-        working-directory: ./frontend
-        run: yarn install --frozen-lockfile
-
-      - name: Run Tests
-        working-directory: ./frontend
-        env:
-          CI: true
-        run: yarn test:coverage
-
-  frontend-build:
-    name: Frontend Build
-    runs-on: ubuntu-latest
-    needs: [changes, frontend-lint, frontend-test]
-    if: |
-      github.event_name == 'push' ||
-      needs.changes.outputs.frontend == 'true' ||
-      needs.changes.outputs.workflows == 'true'
-    strategy:
-      matrix:
-        node-version: [22.13.0] # Node 22+ required by Next.js 16
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'yarn'
-          cache-dependency-path: frontend/yarn.lock
-
-      - name: Install dependencies
-        working-directory: ./frontend
-        run: yarn install --frozen-lockfile
-
-      - name: Build
-        working-directory: ./frontend
-        run: yarn build
