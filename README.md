@@ -257,3 +257,47 @@ Ensure you have generated the RSA key pair in the `keys/` directory first.
 - Set `AUTH_ALLOWED_ORIGIN_1` and `AUTH_ALLOWED_REDIRECT_1` to your production domain(s)
 - Configure MongoDB with authentication and SSL/TLS in `MONGO_URI`
 - Ensure Java 21+ and Spring Boot 4.0.3 compatible dependencies
+
+# References
+
+## Spring Boot & Spring Security
+- [Spring Boot Documentation](https://spring.io/projects/spring-boot) - Official Spring Boot framework documentation and guides for building production-grade applications.
+- [Spring Security Reference](https://spring.io/projects/spring-security) - Comprehensive authentication and authorisation framework for Java applications.
+- [Spring Security OAuth2 Client](https://docs.spring.io/spring-security/reference/servlet/oauth2/client/index.html) - OAuth2 client implementation for delegated access and provider integration.
+- [Spring Data MongoDB](https://spring.io/projects/spring-data-mongodb) - Data access layer abstraction for MongoDB with Spring Boot integration.
+
+## JWT & Cryptography
+- [JJWT Library](https://github.com/jwtk/jjwt) - Java JWT library supporting RS256 RSA asymmetric signing and token lifecycle management.
+- [RFC 7519 - JSON Web Token (JWT)](https://tools.ietf.org/html/rfc7519) - Standard specification for JWT structure, claims, and validation.
+- [RFC 7517 - JSON Web Key (JWK)](https://tools.ietf.org/html/rfc7517) - Specification for JWKS endpoints and public key distribution format.
+- [RS256 RSA Signature Algorithm](https://tools.ietf.org/html/rfc7518#section-3.3) - RSASSA-PKCS1-v1_5 using SHA-256 asymmetric signing details.
+- [OpenSSL RSA Key Generation](https://www.openssl.org/docs/man3.0/man1/openssl-genpkey.html) - Command-line documentation for generating RSA key pairs in PEM format.
+
+## OAuth2 & OpenID Connect
+- [RFC 6749 - The OAuth 2.0 Authorization Framework](https://tools.ietf.org/html/rfc6749) - Core OAuth2 specification defining authorization code flow and token exchange.
+- [RFC 6234 - US Secure Hash and HMAC Algorithms](https://tools.ietf.org/html/rfc6234) - SHA-256 hashing algorithm used for refresh token storage.
+- [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html) - Identity layer on top of OAuth2 enabling standardised user information exchange.
+- [GitHub OAuth Documentation](https://docs.github.com/en/developers/apps/building-oauth-apps) - GitHub's OAuth2 provider integration guide and scopes reference.
+- [Microsoft Entra ID OAuth2](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow) - Azure AD (Entra) OAuth2 authorization code flow documentation.
+
+## Database & Persistence
+- [MongoDB Documentation](https://docs.mongodb.com/) - Official MongoDB reference for CRUD operations, indexing, and TTL index administration.
+- [MongoDB TTL Indexes](https://docs.mongodb.com/manual/core/index-ttl/) - Automatic document expiration mechanism for token cleanup.
+- [Spring Data MongoDB Query Methods](https://spring.io/projects/spring-data-mongodb) - Query derivation and repository pattern for MongoDB.
+
+## Security Best Practices
+- [OWASP - Cross-Site Scripting (XSS)](https://owasp.org/www-community/attacks/xss/) - HttpOnly cookie vulnerability prevention and XSS attack mitigation.
+- [OWASP - Cross-Site Request Forgery (CSRF)](https://owasp.org/www-community/attacks/csrf) - CSRF protection design in stateless APIs.
+- [OWASP - Secure Password Storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) - BCrypt hashing and password security guidelines.
+- [SameSite Cookie Attribute](https://tools.ietf.org/html/draft-west-first-party-cookies) - Cross-site request cookie control and attack mitigation.
+
+## Testing & Development
+- [JUnit 5 Documentation](https://junit.org/junit5/docs/current/user-guide/) - Java testing framework for unit and integration tests.
+- [Testcontainers](https://www.testcontainers.org/) - Docker-based test dependency management for isolated MongoDB testing.
+- [Mockito Testing Framework](https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html) - Mocking library for Java unit tests.
+- [Spring Boot Testing Guide](https://spring.io/guides/gs/testing-web/) - MockMvc and integration testing patterns for Spring Boot applications.
+
+## Supporting Libraries
+- [Lombok Project](https://projectlombok.org/) - Java annotation processor for boilerplate reduction (`@Data`, `@RequiredArgsConstructor`).
+- [Jakarta Bean Validation](https://jakarta.ee/specifications/bean-validation/) - Standard validation annotations for request payload and entity constraints.
+- [SLF4J & Logback](https://www.slf4j.org/) - Logging abstraction and configuration for production diagnostics.
